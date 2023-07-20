@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <ul id="list"></ul>
+  <div>
+    <input type="text" id="input">
+    <button id="send">发送</button>
+    <button id="stop">停止</button>
+  </div>
+  <script>
+    const socket = new WebSocket('ws://localhost:5121')
+    // 监听连接
+    socket.addEventListener('open', (event) => {
+      console.log(event, '连接成功')
+    })
+    // 监听消息
+    socket.addEventListener('message', (e) => {
+      let li = document.createElement('li')
+      let data = JSON.parse(e.data)
+      if (data.type) {
+        console.log(data.message)
+      }
+      if (data.type === 2) {
+        li.innerText = data.message
+        list.appendChild(li)
+      }
+    })
+
+    let input = document.querySelector('#input')
+    let btn = document.querySelector('#send')
+    let list = document.querySelector('#list')
+    let stopBtn = document.querySelector('#stop')
+    // 点击发送消息
+    btn.addEventListener('click', () => {
+      if (input.value) {
+        socket.send(input.value)
+        input.value = ''
+      }
+    })
+    // 主动断开连接
+    stopBtn.addEventListener('click', () => {
+      socket.close()
+    })
+  </script>
+</body>
+
+</html>

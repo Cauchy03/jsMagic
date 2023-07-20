@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <!-- fetch -->
+  <!-- <script>
+    fetch('http://localhost:3000/api/fetch').then(res => {
+      console.log(res)
+      return res.json()
+    }).then(res => {
+      console.log(res)
+    })
+  </script> -->
+  
+  <div>
+    <div class="box">
+      <div id="message"></div>
+    </div>
+  </div>
+  <!-- sse -->
+  <script>
+    document.addEventListener('keydown', (e) => {
+      if(e.keyCode === 13) {
+        const sse = new EventSource('http://localhost:3000/api/sse')
+        sse.addEventListener('message', (e) => {
+          document.getElementById('message').innerHTML += e.data
+        })
+      }
+    })
+  </script>
+</body>
+
+</html>
