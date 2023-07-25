@@ -3,6 +3,7 @@ packages:
   - 'virtualScrollDemo'
   - 'skeletonDemo'
   - 'vite-plugin-markdown'
+  - 'upload'
   # all packages in subdirs of components/
   - 'web/**'
   # exclude packages that are inside test directories
