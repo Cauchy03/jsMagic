@@ -10,7 +10,7 @@
     "moduleResolution": "node",
     // "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
+    "isolatedModules": false,
     "noEmit": true,
     "jsx": "preserve",
 
@@ -21,6 +21,6 @@
     "noFallthroughCasesInSwitch": true,
     
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "src/utils/hash.js"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

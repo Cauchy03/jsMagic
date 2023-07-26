@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "ant-design-vue": "4.x",
+    "spark-md5": "^3.0.2",
     "vue": "^3.3.4"
   },
   "devDependencies": {
