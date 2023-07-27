@@ -1,5 +1,5 @@
 import http from 'http'
-import { handleFormData, handleMerge } from './controller'
+import { handleFormData, handleMerge, handleVerfiy } from './controller'
 
 const server = http.createServer()
 
@@ -11,6 +11,11 @@ server.on("request", async (req, res) => {
     // @ts-ignore
     res.status = 200
     res.end()
+    return
+  }
+
+  if (req.url === "/verify") {
+    await handleVerfiy(req, res)
     return
   }
 

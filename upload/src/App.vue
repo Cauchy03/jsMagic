@@ -2,10 +2,16 @@
   <div>
     <input type="file" @change="handleFileChange">
     <button @click="handleUpload">上传</button>
-    <a-progress type="circle" :stroke-color="{
-      '0%': '#108ee9',
-      '100%': '#87d068',
-    }" :percent="totalProgress" />
+    <span style="margin-left: 5px;">上传总进度
+      <a-progress type="circle" :stroke-color="{
+        '0%': '#108ee9',
+        '100%': '#87d068',
+      }" :percent="totalProgress" />
+    </span>
+
+    <span style="margin-left: 5px;">生成hash进度
+      <a-progress type="dashboard" :percent="hashPercentage" />
+    </span>
     <div style="width: 500px; margin-top: 20px;">
       <a-progress size="small" v-for="(item, index) in data " :key="index" :percent="item.percent" />
     </div>
@@ -15,6 +21,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import request from './utils/request'
+import { message } from 'ant-design-vue';
 
 // 切片大小
 // the chunk size 10MB
@@ -90,7 +97,7 @@ async function uploadChunks() {
       const formData = new FormData()
       formData.append("chunk", chunk)
       formData.append("hash", hash)
-      formData.append("filename", container.file.name)
+      formData.append("fileName", container.file.name)
       formData.append("fileHash", container.hash)
       // FormData对象有一个特点，将文件信息添加进去后，直接打印不能看到文件信息，需要使用for of遍历才能看到
       return {
@@ -122,10 +129,24 @@ const mergeRequest = async () => {
     },
     data: JSON.stringify({
       size: SIZE,
-      filename: container.file.name
+      fileName: container.file.name,
+      fileHash: container.hash
     })
   })
+}
 
+const verifyUpload = async (fileName, fileHash) => {
+  const { data }: any = await request({
+    url: "http://localhost:3000/verify",
+    headers: {
+      "content-type": "application/json"
+    },
+    data: JSON.stringify({
+      fileName,
+      fileHash
+    })
+  })
+  return JSON.parse(data)
 }
 
 // 上传
@@ -134,6 +155,11 @@ const handleUpload = async () => {
   const fileChunkList = createFileChunk(container.file)
   container.hash = await calculateHash(fileChunkList)
   console.log(container.hash)
+  let { isUpload } = await verifyUpload(container.file.name, container.hash)
+  if (isUpload) {
+    message.info('文件已上传')
+    return
+  }
   data.value = fileChunkList.map(({ file }, index) => ({
     fileHash: container.hash,
     chunk: file,

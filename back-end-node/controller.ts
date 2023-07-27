@@ -5,6 +5,8 @@ import http from 'http'
 
 // 大文件存储目录
 const UPLOAD_DIR = path.resolve(__dirname, "target")
+// 提起后缀名
+const extractExt = (fileName: string) => fileName.slice(fileName.lastIndexOf('.'), fileName.length)
 
 // 将每一个切片写入文件流  这里的path是每一个切片路径
 const pipeStream = (path: fse.PathLike, writeStream: any) => {
@@ -26,9 +28,9 @@ const pipeStream = (path: fse.PathLike, writeStream: any) => {
 }
 
 // 合并切片
-const mergeFileChunk = async (filePath: fse.PathLike, filename: string, size: number) => {
+const mergeFileChunk = async (filePath: fse.PathLike, fileHash: string, size: number) => {
   // 获取chunk 临时文件目录
-  const chunkDir = path.resolve(UPLOAD_DIR, 'chunkDir-' + filename)
+  const chunkDir = path.resolve(UPLOAD_DIR, 'chunkDir-' + fileHash)
   // 用于读取一个目录中的文件列表，返回一个包含所有文件名的数组
   const chunkPaths = await fse.readdir(chunkDir)
   // 根据切片下标进行排序
@@ -66,16 +68,18 @@ export const handleFormData = (req: http.IncomingMessage, res: { end: (arg0: str
       res.end("process file chunk failed")
       return;
     }
-    console.log(fields)
-    console.log(files)
     // 获取文件需信息
     const [chunk] = files.chunk
     const [hash] = fields.hash
-    const [filename] = fields.filename
+    const [fileName] = fields.fileName
     const [fileHash] = fields.fileHash
+
+    // 获取每个切片索引
+    let index = hash.split('-')[2]
+
     // // 创建临时文件夹用于临时存储 chunk
     // // 添加 chunkDir 前缀与文件名做区分
-    const chunkDir = path.resolve(UPLOAD_DIR, 'chunkDir-' + filename)
+    const chunkDir = path.resolve(UPLOAD_DIR, 'chunkDir-' + fileHash)
 
     // fse.existsSync 判断一个文件或目录是否存在
     if (!fse.existsSync(chunkDir)) {
@@ -86,13 +90,13 @@ export const handleFormData = (req: http.IncomingMessage, res: { end: (arg0: str
     // fs-extra 的 rename 方法 windows 平台会有权限问题
     // @see https://github.com/meteor/meteor/issues/7852#issuecomment-255767835
     // 将一个文件或目录移动到另一个位置
-    await fse.move(chunk.path, `${chunkDir}/${hash}`)
+    await fse.move(chunk.path, `${chunkDir}/${fileHash + '-' + index}`)
     res.end("received file chunk")
   })
 }
 
 // 解析请求体
-const resolvePost = (req: http.IncomingMessage) =>
+export const resolvePost = (req: http.IncomingMessage) =>
   new Promise(resolve => {
     let chunk = ""
     req.on("data", data => {
@@ -103,13 +107,14 @@ const resolvePost = (req: http.IncomingMessage) =>
     })
   })
 
+// 合并
 export const handleMerge = async (req: http.IncomingMessage, res: { end: (arg0: string) => void }) => {
-  const data = await resolvePost(req)
-  // @ts-ignore
-  const { filename, size } = data
+  const data: any = await resolvePost(req)
+  const { fileName, size, fileHash } = data
+  const ext = extractExt(fileName)
   // 创建目标文件地址
-  const filePath = path.resolve(UPLOAD_DIR, `${filename}`)
-  await mergeFileChunk(filePath, filename, size)
+  const filePath = path.resolve(UPLOAD_DIR, `${fileHash}${ext}`)
+  await mergeFileChunk(filePath, fileHash, size)
   res.end(
     JSON.stringify({
       code: 0,
@@ -117,3 +122,24 @@ export const handleMerge = async (req: http.IncomingMessage, res: { end: (arg0: 
     })
   )
 }
+
+// 验证是否已上传
+export const handleVerfiy = async (req: http.IncomingMessage, res: { end: (arg0: string) => void }) => {
+  const data: any = await resolvePost(req)
+  const { fileName, fileHash } = data
+  const ext = extractExt(fileName)
+  const filePath = path.resolve(UPLOAD_DIR, `${fileHash}${ext}`)
+  if (fse.existsSync(filePath)) {
+    res.end(JSON.stringify({
+      code: 0,
+      isUpload: true,
+      message: 'File has been uploaded'
+    }))
+  } else {
+    res.end(JSON.stringify({
+      code: 0,
+      isUpload: false,
+      message: 'allow upload'
+    }))
+  }
+} 
