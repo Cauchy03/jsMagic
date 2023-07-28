@@ -2,6 +2,7 @@
   <div>
     <input type="file" @change="handleFileChange">
     <button @click="handleUpload">上传</button>
+    <button @click="stopUpload">暂停</button>
     <span style="margin-left: 5px;">上传总进度
       <a-progress type="circle" :stroke-color="{
         '0%': '#108ee9',
@@ -26,7 +27,7 @@ import { message } from 'ant-design-vue';
 // 切片大小
 // the chunk size 10MB
 // const SIZE = 10 * 1024 * 1024;  // 1kb = 1024 字节
-const SIZE = 10 * 1024 * 1024
+const SIZE = 30 * 1024 * 1024
 
 interface Container {
   file: any,
@@ -41,6 +42,7 @@ const container: Container = reactive({
 })
 // 用于保存处理好的chunk切片数组
 const data = ref([])
+const requestList = ref<XMLHttpRequest[]>([])
 
 const hashPercentage = ref<number>()
 
@@ -92,7 +94,7 @@ const calculateHash = (fileChunkList) => {
 
 // 上传切片
 async function uploadChunks() {
-  const requestList = data.value
+  const chunkRequestList = data.value
     .map(({ chunk, hash, index }) => {
       const formData = new FormData()
       formData.append("chunk", chunk)
@@ -109,13 +111,14 @@ async function uploadChunks() {
       request({
         url: "http://localhost:3000",
         data: formData,
+        requestList: requestList.value,
         onProgress: e => {
           data.value[index].percent = Number((e.loaded / e.total * 100).toFixed(2))
         }
       })
     )
   // 并发请求
-  await Promise.all(requestList)
+  await Promise.all(chunkRequestList)
   // 合并切片
   await mergeRequest()
 }
@@ -171,6 +174,15 @@ const handleUpload = async () => {
   await uploadChunks();
 }
 
+// 暂停上传
+const stopUpload = () => {
+  console.log(requestList.value)
+  requestList.value.forEach(item => {
+    item.abort()
+  })
+  requestList.value = []
+  console.log(requestList.value)
+}
 </script>
 
 <style scoped></style>

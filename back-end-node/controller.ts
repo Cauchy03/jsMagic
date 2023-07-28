@@ -75,10 +75,10 @@ export const handleFormData = (req: http.IncomingMessage, res: { end: (arg0: str
     const [fileHash] = fields.fileHash
 
     // 获取每个切片索引
-    let index = hash.split('-')[2]
+    let index = hash.split('-')[hash.split('-').length - 1]
 
-    // // 创建临时文件夹用于临时存储 chunk
-    // // 添加 chunkDir 前缀与文件名做区分
+    // 创建临时文件夹用于临时存储 chunk
+    // 添加 chunkDir 前缀与文件名做区分
     const chunkDir = path.resolve(UPLOAD_DIR, 'chunkDir-' + fileHash)
 
     // fse.existsSync 判断一个文件或目录是否存在
@@ -106,6 +106,11 @@ export const resolvePost = (req: http.IncomingMessage) =>
       resolve(JSON.parse(chunk))
     })
   })
+
+// 返回已上传的所有切片名
+// const createUploadedList = (filePath) => {
+//   fse.existsSync(path.resolve(UPLOAD_DIR, fileHash)) fse.readdir(filePath)
+// }
 
 // 合并
 export const handleMerge = async (req: http.IncomingMessage, res: { end: (arg0: string) => void }) => {
