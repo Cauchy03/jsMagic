@@ -27,7 +27,9 @@ server.on("request", async (req, res) => {
     await handleMerge(req, res)
     return
   }
-
+  
 })
 
-server.listen(3000, () => console.log("listening port 3000"))
+server.listen(3000, () => {
+  console.log("listening port 3000")
+})

@@ -49,7 +49,7 @@ const mergeFileChunk = async (filePath: fse.PathLike, fileHash: string, size: nu
     })
   )
   // 合并后删除保存切片的目录
-  fse.rmdirSync(chunkDir)
+  fse.rmdir(chunkDir)
 }
 
 // 处理切片，存入服务器
@@ -74,9 +74,6 @@ export const handleFormData = (req: http.IncomingMessage, res: { end: (arg0: str
     const [fileName] = fields.fileName
     const [fileHash] = fields.fileHash
 
-    // 获取每个切片索引
-    let index = hash.split('-')[hash.split('-').length - 1]
-
     // 创建临时文件夹用于临时存储 chunk
     // 添加 chunkDir 前缀与文件名做区分
     const chunkDir = path.resolve(UPLOAD_DIR, 'chunkDir-' + fileHash)
@@ -90,7 +87,7 @@ export const handleFormData = (req: http.IncomingMessage, res: { end: (arg0: str
     // fs-extra 的 rename 方法 windows 平台会有权限问题
     // @see https://github.com/meteor/meteor/issues/7852#issuecomment-255767835
     // 将一个文件或目录移动到另一个位置
-    await fse.move(chunk.path, `${chunkDir}/${fileHash + '-' + index}`)
+    await fse.move(chunk.path, `${chunkDir}/${hash}`)
     res.end("received file chunk")
   })
 }
@@ -108,9 +105,10 @@ export const resolvePost = (req: http.IncomingMessage) =>
   })
 
 // 返回已上传的所有切片名
-// const createUploadedList = (filePath) => {
-//   fse.existsSync(path.resolve(UPLOAD_DIR, fileHash)) fse.readdir(filePath)
-// }
+export const createUploadedList = async (fileHash: string) => {
+  const filePath = path.resolve(UPLOAD_DIR, 'chunkDir-' + fileHash)
+  return fse.existsSync(filePath) ? await fse.readdir(filePath) : []
+}
 
 // 合并
 export const handleMerge = async (req: http.IncomingMessage, res: { end: (arg0: string) => void }) => {
@@ -144,7 +142,8 @@ export const handleVerfiy = async (req: http.IncomingMessage, res: { end: (arg0:
     res.end(JSON.stringify({
       code: 0,
       isUpload: false,
-      message: 'allow upload'
+      message: 'allow upload',
+      uploadedList: await createUploadedList(fileHash)
     }))
   }
 } 

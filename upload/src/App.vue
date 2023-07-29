@@ -3,6 +3,7 @@
     <input type="file" @change="handleFileChange">
     <button @click="handleUpload">上传</button>
     <button @click="stopUpload">暂停</button>
+    <button @click="resumeUpload">恢复上传</button>
     <span style="margin-left: 5px;">上传总进度
       <a-progress type="circle" :stroke-color="{
         '0%': '#108ee9',
@@ -92,15 +93,16 @@ const calculateHash = (fileChunkList) => {
   })
 }
 
-// 上传切片
-async function uploadChunks() {
+// 上传切片,同时过滤服务器已有切片
+async function uploadChunks(uploadedList = []) {
   const chunkRequestList = data.value
-    .map(({ chunk, hash, index }) => {
+    .filter(({ hash }) => !uploadedList.includes(hash)) // 过滤已上传的切片文件
+    .map(({ chunk, hash, index, fileHash, fileName }) => {
       const formData = new FormData()
       formData.append("chunk", chunk)
       formData.append("hash", hash)
-      formData.append("fileName", container.file.name)
-      formData.append("fileHash", container.hash)
+      formData.append("fileName", fileName)
+      formData.append("fileHash", fileHash)
       // FormData对象有一个特点，将文件信息添加进去后，直接打印不能看到文件信息，需要使用for of遍历才能看到
       return {
         formData,
@@ -119,8 +121,11 @@ async function uploadChunks() {
     )
   // 并发请求
   await Promise.all(chunkRequestList)
-  // 合并切片
-  await mergeRequest()
+  // 之前上传的切片数量 + 本次上传的切片数量 = 所有切片数量时合并切片
+  if (uploadedList.length + chunkRequestList.length === data.value.length) {
+    // 合并切片
+    await mergeRequest()
+  }
 }
 
 // 合并切片
@@ -158,30 +163,38 @@ const handleUpload = async () => {
   const fileChunkList = createFileChunk(container.file)
   container.hash = await calculateHash(fileChunkList)
   console.log(container.hash)
-  let { isUpload } = await verifyUpload(container.file.name, container.hash)
+  let { isUpload, uploadedList } = await verifyUpload(container.file.name, container.hash)
   if (isUpload) {
     message.info('文件已上传')
     return
   }
   data.value = fileChunkList.map(({ file }, index) => ({
-    fileHash: container.hash,
+    fileHash: container.hash, // 文件hash
+    hash: container.hash + "-" + index, // hash + 数组下标
+    fileName: container.file.name, // 文件名
+    index, // 索引 
     chunk: file,
     size: file.size, // 每个切片文件大小
-    hash: container.file.name + "-" + index, // 文件名 + 数组下标
-    index, // 索引 
-    percent: 0  // 记录每个切片上传进度
+    percent: uploadedList.includes(container.hash + "-" + index) ? 100 : 0   // 记录每个切片上传进度, 如果已经上传过直接100
   }))
-  await uploadChunks();
+  await uploadChunks(uploadedList)
 }
 
 // 暂停上传
 const stopUpload = () => {
-  console.log(requestList.value)
   requestList.value.forEach(item => {
     item.abort()
   })
   requestList.value = []
-  console.log(requestList.value)
+}
+
+// 恢复上传
+const resumeUpload = async () => {
+  const { uploadedList } = await verifyUpload(container.file.name, container.hash)
+  data.value.forEach(item => {
+    item.percent = uploadedList.includes(item.hash) ? 100 : 0
+  })
+  await uploadChunks(uploadedList)
 }
 </script>
 
