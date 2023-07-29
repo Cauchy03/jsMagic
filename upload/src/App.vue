@@ -21,14 +21,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue'
 import request from './utils/request'
-import { message } from 'ant-design-vue';
+import { message } from 'ant-design-vue'
 
 // 切片大小
 // the chunk size 10MB
 // const SIZE = 10 * 1024 * 1024;  // 1kb = 1024 字节
-const SIZE = 30 * 1024 * 1024
+const SIZE = 10 * 1024 * 1024
 
 interface Container {
   file: any,
@@ -63,9 +63,9 @@ const handleFileChange = (e: any) => {
 }
 
 // 生成文件切片
-function createFileChunk(file: any, size = SIZE) {
-  const fileChunkList = [];
-  let cur = 0;
+const createFileChunk = (file: any, size = SIZE) => {
+  const fileChunkList = []
+  let cur = 0
   // file.size 是字节数
   while (cur < file.size) {
     fileChunkList.push({
@@ -73,10 +73,10 @@ function createFileChunk(file: any, size = SIZE) {
     })
     cur += size
   }
-  return fileChunkList;
+  return fileChunkList
 }
 
-// 生成文件 hash（web-worker) 用于文件续传 
+// 生成文件hash（web-worker)
 const calculateHash = (fileChunkList) => {
   return new Promise(resolve => {
     // 添加worker
@@ -94,7 +94,7 @@ const calculateHash = (fileChunkList) => {
 }
 
 // 上传切片,同时过滤服务器已有切片
-async function uploadChunks(uploadedList = []) {
+const uploadChunks = async (uploadedList = []) => {
   const chunkRequestList = data.value
     .filter(({ hash }) => !uploadedList.includes(hash)) // 过滤已上传的切片文件
     .map(({ chunk, hash, index, fileHash, fileName }) => {
@@ -161,7 +161,11 @@ const verifyUpload = async (fileName, fileHash) => {
 const handleUpload = async () => {
   if (!container.file) return
   const fileChunkList = createFileChunk(container.file)
+  let a = Date.now()
+  console.log(a)
   container.hash = await calculateHash(fileChunkList)
+  let b = Date.now()
+  console.log(b - a)
   console.log(container.hash)
   let { isUpload, uploadedList } = await verifyUpload(container.file.name, container.hash)
   if (isUpload) {
