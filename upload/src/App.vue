@@ -28,7 +28,7 @@ import { message } from 'ant-design-vue'
 // 切片大小
 // the chunk size 10MB
 // const SIZE = 10 * 1024 * 1024;  // 1kb = 1024 字节
-const SIZE = 10 * 1024 * 1024
+const SIZE = 30 * 1024 * 1024
 
 interface Container {
   file: any,
@@ -93,6 +93,42 @@ const calculateHash = (fileChunkList) => {
   })
 }
 
+// 并发控制切片请求
+const requestSend = (list: any[], max = 4) => {
+  return new Promise<void>((resolve, reject) => {
+    let len = list.length
+    let cur = 0
+    let counter = 0
+    async function start() {
+      while (cur < len && max > 0) {
+        max-- // 占用通道
+        console.log(cur, "start")
+        const { formData, index } = list[cur]
+        cur++
+        request({
+          url: "http://localhost:3000",
+          data: formData,
+          requestList: requestList.value,
+          onProgress: e => {
+            data.value[index].percent = Number((e.loaded / e.total * 100).toFixed(2))
+          }
+        }).then(() => {
+          max++ // 释放通道
+          counter++
+          if (counter === len) {
+            resolve()
+          } else {
+            start()
+          }
+        }).catch(err => {
+          reject(err)
+        })
+      }
+    }
+    start()
+  })
+}
+
 // 上传切片,同时过滤服务器已有切片
 const uploadChunks = async (uploadedList = []) => {
   const chunkRequestList = data.value
@@ -109,18 +145,22 @@ const uploadChunks = async (uploadedList = []) => {
         index
       }
     })
-    .map(({ formData, index }) =>
-      request({
-        url: "http://localhost:3000",
-        data: formData,
-        requestList: requestList.value,
-        onProgress: e => {
-          data.value[index].percent = Number((e.loaded / e.total * 100).toFixed(2))
-        }
-      })
-    )
-  // 并发请求
-  await Promise.all(chunkRequestList)
+  //   .map(({ formData, index }) =>
+  //     request({
+  //       url: "http://localhost:3000",
+  //       data: formData,
+  //       requestList: requestList.value,
+  //       onProgress: e => {
+  //         data.value[index].percent = Number((e.loaded / e.total * 100).toFixed(2))
+  //       }
+  //     })
+  //   )
+  // // 并发请求
+  // await Promise.all(chunkRequestList)
+
+
+  await requestSend(chunkRequestList)
+
   // 之前上传的切片数量 + 本次上传的切片数量 = 所有切片数量时合并切片
   if (uploadedList.length + chunkRequestList.length === data.value.length) {
     // 合并切片
@@ -161,11 +201,7 @@ const verifyUpload = async (fileName, fileHash) => {
 const handleUpload = async () => {
   if (!container.file) return
   const fileChunkList = createFileChunk(container.file)
-  let a = Date.now()
-  console.log(a)
   container.hash = await calculateHash(fileChunkList)
-  let b = Date.now()
-  console.log(b - a)
   console.log(container.hash)
   let { isUpload, uploadedList } = await verifyUpload(container.file.name, container.hash)
   if (isUpload) {
