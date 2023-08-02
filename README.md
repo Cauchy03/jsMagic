@@ -1,2 +1,2 @@
 # jsMagic
-一些Demo
+full of magic
