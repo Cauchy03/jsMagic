@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <img src="default.jpg"
+    data-src=data-src="https://p1-jj.byteimg.com/tos-cn-i-t2oaga2asx/leancloud-assets/dd45c44ce639350dae9b.jpg~tplv-t2oaga2asx-zoom-crop-mark:1512:1512:1512:851.awebp">
+  <script>
+    let img = document.querySelector('img')
+
+    lazyLoad() // 页面加载先调用一次
+    window.onscroll = throttle(lazyLoad, 1000) // 绑定scroll事件
+
+    function lazyLoad() {
+      console.log('滚动事件触发');
+      let seeHeight = document.documentElement.clientHeight
+      let scrollTop = document.documentElement.scrollTop || document.body.scrollTop
+
+      // 判断图片是否进入可视区
+      if (img.offsetTop < seeHeight + scrollTop) {
+        if (img.getAttribute('src') === 'default.jpg') {
+          console.log('懒加载成功！！！');
+          img.src = img.getAttribute('data-src')
+        }
+      }
+    }
+
+    // 节流 其实应该是防抖
+    function throttle(fn, delay) {
+      let lastTime = 0
+      return function () {
+        const context = this
+        const args = arguments
+        const curTime = Date.now()
+        if (curTime - lastTime > delay) {
+          fn.apply(context, args)
+          lastTime = curTime
+        }
+      }
+    }
+
+    console.log('滚动条距顶部', document.documentElement.scrollTop);
+    console.log('可视化区域', document.documentElement.clientHeight);
+    console.log('图片', img.offsetTop);
+  </script>
+</body>
+
+</html>
