@@ -43,6 +43,7 @@ const container: Container = reactive({
 })
 // 用于保存处理好的chunk切片数组
 const data = ref([])
+// 用于保存正在上传的xhr实例，暂停和恢复请求，已经上传的直接移除
 const requestList = ref<XMLHttpRequest[]>([])
 
 const hashPercentage = ref<number>()
@@ -108,6 +109,7 @@ const requestSend = (list: any[], max = 4) => {
         request({
           url: "http://localhost:3000",
           data: formData,
+          // @ts-ignore
           requestList: requestList.value,
           onProgress: e => {
             data.value[index].percent = Number((e.loaded / e.total * 100).toFixed(2))
@@ -222,6 +224,7 @@ const handleUpload = async () => {
 
 // 暂停上传
 const stopUpload = () => {
+  console.log(requestList.value)
   requestList.value.forEach(item => {
     item.abort()
   })
